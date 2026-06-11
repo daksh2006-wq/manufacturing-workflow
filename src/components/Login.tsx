@@ -86,3 +86,17 @@ export default function Login({ onLogin }: Props) {
                 {error}
               </div>
             )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-medium py-2.5 rounded-lg transition shadow"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </div>
+        </form>
+        <p className="text-center text-slate-400 text-xs mt-6">© {new Date().getFullYear()} JobWork Pro. All rights reserved.</p>
+      </div>
+    </div>
+  );
+}
