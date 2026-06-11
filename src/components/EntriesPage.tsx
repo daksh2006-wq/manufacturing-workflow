@@ -41,14 +41,16 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
       .filter(e => {
         const q = search.toLowerCase();
         if (!q) return true;
+        // FIX: search by part name (looked up from parts array via partId)
+        const partDef = parts.find(p => p.id === e.partId);
         return (
           e.challanNo.toLowerCase().includes(q) ||
-          e.part.toLowerCase().includes(q) ||
+          (partDef?.name || e.part || '').toLowerCase().includes(q) ||
           e.subPart.toLowerCase().includes(q)
         );
       })
       .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
-  }, [entries, workflow, search, filterDir, filterFault]);
+  }, [entries, workflow, search, filterDir, filterFault, parts]);
 
   const totals = useMemo(() => {
     const wf = entries.filter(e => e.workflow === workflow);
@@ -61,25 +63,21 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
 
   const companyName = (id: string) => companies.find(c => c.id === id)?.name || '—';
 
+  // FIX: look up part by partId (not name) for accurate name + modelNo
+  const getPartDef = (entry: Entry) => parts.find(p => p.id === entry.partId);
+
   const onDelete = async (id: string) => {
-  if (role !== 'admin') {
-    alert('Only admin can delete entries');
-    return;
-  }
-
-  if (!confirm('Delete this entry?')) return;
-
-  const { error } = await supabase
-    .from('entries')
-    .delete()
-    .eq('id', id);
-
-  console.log('DELETE ENTRY ERROR:', error);
-
-  if (!error) {
-    setEntries(entries.filter(e => e.id !== id));
-  }
-};
+    if (role !== 'admin') {
+      alert('Only admin can delete entries');
+      return;
+    }
+    if (!confirm('Delete this entry?')) return;
+    const { error } = await supabase.from('entries').delete().eq('id', id);
+    console.log('DELETE ENTRY ERROR:', error);
+    if (!error) {
+      setEntries(entries.filter(e => e.id !== id));
+    }
+  };
 
   const onEdit = (e: Entry) => {
     if (role !== 'admin') { alert('Only admin can edit entries'); return; }
@@ -88,60 +86,51 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
   };
 
   const onSubmit = async (
-  data: Omit<Entry, 'id' | 'createdAt' | 'createdBy' | 'workflow'> & {
-    id?: string;
-  }
-) => {
-  if (data.id) {
-    const updatedEntry: Entry = {
-      ...entries.find(e => e.id === data.id)!,
-      ...data,
-      id: data.id,
-    };
-
-    const { error } = await supabase
-      .from('entries')
-      .update({
-        challan_no: updatedEntry.challanNo,
-        date: updatedEntry.date,
-        company_id: updatedEntry.companyId,
-        part: updatedEntry.part,
-        sub_part: updatedEntry.subPart,
-        quantity: updatedEntry.quantity,
-        mf_fault: updatedEntry.mfFault,
-        cf_fault: updatedEntry.cfFault,
-        direction: updatedEntry.direction,
-        workflow: updatedEntry.workflow,
-      })
-      .eq('id', data.id);
-
-    console.log('UPDATE ENTRY ERROR:', error);
-
-    if (!error) {
-      setEntries(
-        entries.map(e =>
-          e.id === data.id ? updatedEntry : e
-        )
-      );
-    }
-  } else {
-    const newEntry: Entry = {
-      ...data,
-      id: uid(),
-      workflow,
-      createdAt: new Date().toISOString(),
-      createdBy: currentUser,
-    } as Entry;
-
-    const { error } = await supabase
-      .from('entries')
-      .insert([
-        {
+    data: Omit<Entry, 'id' | 'createdAt' | 'createdBy' | 'workflow'> & { id?: string }
+  ) => {
+    if (data.id) {
+      const updatedEntry: Entry = {
+        ...entries.find(e => e.id === data.id)!,
+        ...data,
+        id: data.id,
+      };
+      const { error } = await supabase
+        .from('entries')
+        .update({
+          challan_no: updatedEntry.challanNo,
+          date: updatedEntry.date,
+          company_id: updatedEntry.companyId,
+          part_id: updatedEntry.partId,       // FIX: store part_id
+          part: updatedEntry.part,             // keep name for backwards compat
+          sub_part: updatedEntry.subPart,
+          quantity: updatedEntry.quantity,
+          mf_fault: updatedEntry.mfFault,
+          cf_fault: updatedEntry.cfFault,
+          direction: updatedEntry.direction,
+          workflow: updatedEntry.workflow,
+        })
+        .eq('id', data.id);
+      console.log('UPDATE ENTRY ERROR:', error);
+      if (!error) {
+        setEntries(entries.map(e => e.id === data.id ? updatedEntry : e));
+      }
+    } else {
+      const newEntry: Entry = {
+        ...data,
+        id: uid(),
+        workflow,
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser,
+      } as Entry;
+      const { error } = await supabase
+        .from('entries')
+        .insert([{
           id: newEntry.id,
           challan_no: newEntry.challanNo,
           date: newEntry.date,
           company_id: newEntry.companyId,
-          part: newEntry.part,
+          part_id: newEntry.partId,           // FIX: store part_id
+          part: newEntry.part,                 // keep name for backwards compat
           sub_part: newEntry.subPart,
           quantity: newEntry.quantity,
           mf_fault: newEntry.mfFault,
@@ -150,19 +139,15 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
           workflow: newEntry.workflow,
           created_at: newEntry.createdAt,
           created_by: newEntry.createdBy,
-        },
-      ]);
-
-    console.log('INSERT ENTRY ERROR:', error);
-
-    if (!error) {
-      setEntries([newEntry, ...entries]);
+        }]);
+      console.log('INSERT ENTRY ERROR:', error);
+      if (!error) {
+        setEntries([newEntry, ...entries]);
+      }
     }
-  }
-
-  setShowForm(false);
-  setEditing(null);
-}; 
+    setShowForm(false);
+    setEditing(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -232,34 +217,43 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
               {filtered.length === 0 && (
                 <tr><td colSpan={11} className="text-center text-slate-400 py-10">No entries found. Click "New Entry" to add one.</td></tr>
               )}
-              {filtered.map(e => (
-                <tr key={e.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{e.date}</td>
-                  <td className="px-4 py-3 font-medium text-slate-800">{e.challanNo}</td>
-                  <td className="px-4 py-3 text-slate-700">{companyName(e.companyId)}</td>
-                  <td className="px-4 py-3 text-slate-700">
-                    {e.part || <span className="text-slate-400 italic">None</span>}
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">{parts.find(p => p.name === e.part)?.modelNo || '—'}</td>
-                  <td className="px-4 py-3 text-slate-700">{e.subPart || '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-1 rounded ${e.direction === 'inward' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {e.direction}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold text-slate-800">{e.quantity}</td>
-                  <td className="px-4 py-3 text-right">
-                    {e.mfFault > 0 ? <span className="text-rose-600 font-bold">{e.mfFault}</span> : <span className="text-slate-300">0</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {e.cfFault > 0 ? <span className="text-fuchsia-600 font-bold">{e.cfFault}</span> : <span className="text-slate-300">0</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <button onClick={() => onEdit(e)} className="text-indigo-600 hover:text-indigo-800 text-xs font-medium mr-3">Edit</button>
-                    <button onClick={() => onDelete(e.id)} className="text-rose-600 hover:text-rose-800 text-xs font-medium">Delete</button>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map(e => {
+                // FIX: look up by partId first, fallback to name for old entries
+                const partDef = getPartDef(e);
+                const partName = partDef?.name || e.part || '';
+                const modelNo = partDef?.modelNo || '';
+                return (
+                  <tr key={e.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{e.date}</td>
+                    <td className="px-4 py-3 font-medium text-slate-800">{e.challanNo}</td>
+                    <td className="px-4 py-3 text-slate-700">{companyName(e.companyId)}</td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {partName ? `${partName}` : <span className="text-slate-400 italic">None</span>}
+                    </td>
+                    {/* FIX: Model No column now shows correct model via partId lookup */}
+                    <td className="px-4 py-3 text-slate-700 font-medium">
+                      {modelNo ? <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600">{modelNo}</span> : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{e.subPart || '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-medium px-2 py-1 rounded ${e.direction === 'inward' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {e.direction}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-800">{e.quantity}</td>
+                    <td className="px-4 py-3 text-right">
+                      {e.mfFault > 0 ? <span className="text-rose-600 font-bold">{e.mfFault}</span> : <span className="text-slate-300">0</span>}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {e.cfFault > 0 ? <span className="text-fuchsia-600 font-bold">{e.cfFault}</span> : <span className="text-slate-300">0</span>}
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <button onClick={() => onEdit(e)} className="text-indigo-600 hover:text-indigo-800 text-xs font-medium mr-3">Edit</button>
+                      <button onClick={() => onDelete(e.id)} className="text-rose-600 hover:text-rose-800 text-xs font-medium">Delete</button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -308,7 +302,8 @@ function EntryForm({ onClose, onSubmit, editing, companies, parts, workflow }: {
     challanNo: editing?.challanNo || '',
     date: editing?.date || new Date().toISOString().slice(0, 10),
     companyId: editing?.companyId || '',
-    part: editing?.part || '',
+    // FIX: store partId (not name) — use editing?.partId if editing, otherwise ''
+    partId: editing?.partId || '',
     subPart: editing?.subPart || '',
     quantity: editing?.quantity ?? '' as number | '',
     mfFault: editing?.mfFault || 0,
@@ -318,6 +313,9 @@ function EntryForm({ onClose, onSubmit, editing, companies, parts, workflow }: {
 
   const update = (k: string, v: any) => setForm({ ...form, [k]: v });
 
+  // FIX: look up selected part by ID — so BRACKET (80445) and BRACKET (89445) are always distinct
+  const selectedPartDef = parts.find(p => p.id === form.partId);
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const quantity = form.quantity === '' ? 0 : Number(form.quantity);
@@ -325,12 +323,15 @@ function EntryForm({ onClose, onSubmit, editing, companies, parts, workflow }: {
       alert('Challan, Company, Direction, and Quantity are required.');
       return;
     }
-    if (!form.part.trim()) {
-      alert('Part is required. Please add/select a part from the Parts interface.');
+    if (!form.partId) {
+      alert('Part is required. Please select a part.');
       return;
     }
     onSubmit({
       ...form,
+      // FIX: also pass part name and modelNo for display/search convenience
+      part: selectedPartDef?.name || '',
+      partId: form.partId,
       quantity,
       direction: form.direction as Direction,
       mfFault: form.direction === 'outward' ? Number(form.mfFault || 0) : 0,
@@ -342,8 +343,6 @@ function EntryForm({ onClose, onSubmit, editing, companies, parts, workflow }: {
   const dirLabel = workflow === 'jobwork_in' ? { inward: 'Receive from Customer', outward: 'Return to Customer' }
     : workflow === 'jobwork_out' ? { inward: 'Receive from Vendor', outward: 'Send to Vendor' }
     : { inward: 'Purchase Inward', outward: 'Sale Outward' };
-
-  const selectedPartDef = parts.find(p => p.name === form.part);
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -363,21 +362,42 @@ function EntryForm({ onClose, onSubmit, editing, companies, parts, workflow }: {
               </select>
             </Field>
           </div>
-          
+
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
             <p className="text-xs font-semibold text-slate-500 uppercase">Item Details</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Part *">
-                <select className="inp" value={form.part} onChange={e => setForm({ ...form, part: e.target.value, subPart: '' })} required>
+                {/* FIX: value is p.id — each part is unique even if same name */}
+                <select
+                  className="inp"
+                  value={form.partId}
+                  onChange={e => setForm({ ...form, partId: e.target.value, subPart: '' })}
+                  required
+                >
                   <option value="">-- Select Part --</option>
-                  {parts.map(p => <option key={p.id} value={p.name}>{p.name} {p.modelNo ? `(${p.modelNo})` : ''}</option>)}
+                  {parts.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{p.modelNo ? ` (${p.modelNo})` : ''}
+                    </option>
+                  ))}
                 </select>
               </Field>
               <Field label="Model No">
-                <input className="inp bg-slate-100 text-slate-600" value={selectedPartDef?.modelNo || ''} readOnly placeholder="Auto from selected part" />
+                {/* FIX: always correct because selectedPartDef uses ID lookup */}
+                <input
+                  className="inp bg-slate-100 text-slate-600"
+                  value={selectedPartDef?.modelNo || ''}
+                  readOnly
+                  placeholder="Auto from selected part"
+                />
               </Field>
               <Field label="Sub Part">
-                <select className="inp" value={form.subPart} onChange={e => update('subPart', e.target.value)} disabled={!selectedPartDef || selectedPartDef.subParts.length === 0}>
+                <select
+                  className="inp"
+                  value={form.subPart}
+                  onChange={e => update('subPart', e.target.value)}
+                  disabled={!selectedPartDef || selectedPartDef.subParts.length === 0}
+                >
                   <option value="">-- Select Sub-Part --</option>
                   {selectedPartDef?.subParts.map(sp => <option key={sp} value={sp}>{sp}</option>)}
                 </select>
@@ -393,8 +413,11 @@ function EntryForm({ onClose, onSubmit, editing, companies, parts, workflow }: {
                 <option value="outward">{dirLabel.outward}</option>
               </select>
             </Field>
-            <Field label="Quantity"><input type="number" min={0} className="inp border-indigo-300" value={form.quantity} onChange={e => update('quantity', e.target.value === '' ? '' : Number(e.target.value))} onBlur={() => { if (form.quantity === '') update('quantity', 0); }} placeholder="0" /></Field>
-            
+            <Field label="Quantity">
+              <input type="number" min={0} className="inp border-indigo-300" value={form.quantity}
+                onChange={e => update('quantity', e.target.value === '' ? '' : Number(e.target.value))}
+                onBlur={() => { if (form.quantity === '') update('quantity', 0); }} placeholder="0" />
+            </Field>
             {form.direction === 'outward' && (
               <>
                 <Field label="M/F Fault Qty *">
@@ -406,7 +429,7 @@ function EntryForm({ onClose, onSubmit, editing, companies, parts, workflow }: {
               </>
             )}
           </div>
-          
+
           <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-200">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg">Cancel</button>
             <button type="submit" className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">{editing ? 'Update' : 'Save'} Entry</button>
