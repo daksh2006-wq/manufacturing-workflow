@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { User, Role } from '../types';
+import { supabase } from '../utils/supabase';
 
 interface Props {
   users: User[];
@@ -11,23 +12,39 @@ export default function UsersPage({ users, setUsers, currentUser }: Props) {
   const [show, setShow] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
 
-  const onDelete = (username: string) => {
+  const onDelete = async (username: string) => {
     if (username === currentUser) return alert("You can't delete yourself.");
     if (users.filter(u => u.role === 'admin').length === 1 && users.find(u => u.username === username)?.role === 'admin')
       return alert('At least one admin must remain.');
     if (!confirm('Delete this user?')) return;
+    const { error } = await supabase.from('users').delete().eq('username', username);
+    if (error) return alert('Error deleting user');
     setUsers(users.filter(u => u.username !== username));
   };
 
-  const onSubmit = (data: User & { isNew?: boolean }) => {
+  const onSubmit = async (data: User & { isNew?: boolean }) => {
     if (!data.username || !data.password || !data.name) return alert('All fields required');
     if (data.isNew) {
       if (users.find(u => u.username === data.username)) return alert('Username already exists');
+      const { error } = await supabase.from('users').insert([{
+        username: data.username,
+        password: data.password,
+        role: data.role,
+        name: data.name,
+      }]);
+      if (error) return alert('Error creating user: ' + error.message);
       setUsers([...users, { username: data.username, password: data.password, role: data.role, name: data.name }]);
     } else {
-      setUsers(users.map(u => u.username === data.username ? data : u));
+      const { error } = await supabase.from('users').update({
+        password: data.password,
+        role: data.role,
+        name: data.name,
+      }).eq('username', data.username);
+      if (error) return alert('Error updating user: ' + error.message);
+      setUsers(users.map(u => u.username === data.username ? { ...u, password: data.password, role: data.role, name: data.name } : u));
     }
-    setShow(false); setEditing(null);
+    setShow(false);
+    setEditing(null);
   };
 
   return (
@@ -57,7 +74,7 @@ export default function UsersPage({ users, setUsers, currentUser }: Props) {
                 <td className="px-5 py-3 font-medium text-slate-800">{u.name}{u.username === currentUser && <span className="ml-2 text-xs text-indigo-600">(you)</span>}</td>
                 <td className="px-5 py-3 text-slate-700">{u.username}</td>
                 <td className="px-5 py-3"><span className={`text-xs font-medium px-2 py-1 rounded ${u.role === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700'}`}>{u.role}</span></td>
-                <td className="px-5 py-3 text-slate-500 font-mono">{'•'.repeat(Math.min(u.password.length, 8))}</td>
+                <td className="px-5 py-3 text-slate-500 font-mono">••••••••</td>
                 <td className="px-5 py-3 text-right">
                   <button onClick={() => { setEditing(u); setShow(true); }} className="text-indigo-600 hover:text-indigo-800 text-xs font-medium mr-3">Edit</button>
                   <button onClick={() => onDelete(u.username)} className="text-rose-600 hover:text-rose-800 text-xs font-medium">Delete</button>
@@ -75,7 +92,11 @@ export default function UsersPage({ users, setUsers, currentUser }: Props) {
 
 function UserForm({ onClose, onSubmit, editing }: { onClose: () => void; onSubmit: (d: any) => void; editing: User | null }) {
   const [f, setF] = useState<User & { isNew?: boolean }>({
-    username: editing?.username || '', password: editing?.password || '', role: editing?.role || 'operator', name: editing?.name || '', isNew: !editing,
+    username: editing?.username || '',
+    password: '',
+    role: editing?.role || 'operator',
+    name: editing?.name || '',
+    isNew: !editing,
   });
   const update = (k: string, v: any) => setF({ ...f, [k]: v });
   const submit = (e: React.FormEvent) => { e.preventDefault(); onSubmit(f); };
@@ -93,8 +114,8 @@ function UserForm({ onClose, onSubmit, editing }: { onClose: () => void; onSubmi
           <label className="block"><span className="block text-xs font-medium text-slate-600 mb-1.5">Username *</span>
             <input className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" value={f.username} onChange={e => update('username', e.target.value)} disabled={!f.isNew} required />
           </label>
-          <label className="block"><span className="block text-xs font-medium text-slate-600 mb-1.5">Password *</span>
-            <input className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" value={f.password} onChange={e => update('password', e.target.value)} required />
+          <label className="block"><span className="block text-xs font-medium text-slate-600 mb-1.5">{editing ? 'New Password *' : 'Password *'}</span>
+            <input type="password" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" value={f.password} onChange={e => update('password', e.target.value)} required placeholder="••••••••" />
           </label>
           <label className="block"><span className="block text-xs font-medium text-slate-600 mb-1.5">Role</span>
             <select className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" value={f.role} onChange={e => update('role', e.target.value as Role)}>
