@@ -8,22 +8,11 @@ const KEYS = {
   session: 'jwp_session',
 };
 
-const defaultUsers: User[] = [
-  { username: 'admin', password: 'admin123', role: 'admin', name: 'Administrator' },
-  { username: 'operator', password: 'operator123', role: 'operator', name: 'Operator' },
-];
+const defaultUsers: User[] = [];
 
-const defaultCompanies: Company[] = [
-  { id: 'c1', name: 'Mita India', type: 'customer', contact: '', email: '', address: '' },
-  { id: 'c2', name: 'Mita Sale', type: 'customer', contact: '', email: '', address: '' },
-  { id: 'c3', name: 'XYZ Manufacturing', type: 'vendor', contact: '', email: '', address: '' },
-  { id: 'c4', name: 'RawMart Suppliers', type: 'supplier', contact: '', email: '', address: '' },
-];
+const defaultCompanies: Company[] = [];
 
-const defaultParts: PartDef[] = [
-  { id: 'p1', name: 'Casting', modelNo: 'CAST-001', subParts: ['Base', 'Cover', 'Top'] },
-  { id: 'p2', name: 'Raw Bar', modelNo: 'RAW-001', subParts: ['10mm', '20mm', '30mm'] },
-];
+const defaultParts: PartDef[] = [];
 
 const defaultEntries: Entry[] = [];
 

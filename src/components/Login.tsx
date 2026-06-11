@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { useState } from 'react';
 import { store } from '../store';
+import { supabase } from '../utils/supabase';
 
 interface Props {
   onLogin: (username: string) => void;
@@ -10,17 +11,38 @@ export default function Login({ onLogin }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const users = store.getUsers();
-    const user = users.find(u => u.username === username.trim() && u.password === password);
-    if (!user) {
-      setError('Invalid username or password');
-      return;
+    setError('');
+    setLoading(true);
+
+    try {
+      const { data, error: dbError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username.trim())
+        .single();
+
+      if (dbError || !data) {
+        setError('Invalid username or password');
+        return;
+      }
+
+      const passwordMatch = await bcrypt.compare(password, data.password);
+      if (!passwordMatch) {
+        setError('Invalid username or password');
+        return;
+      }
+
+      store.setSession({ username: data.username });
+      onLogin(data.username);
+    } catch {
+      setError('Something went wrong. Try again.');
+    } finally {
+      setLoading(false);
     }
-    store.setSession({ username: user.username });
-    onLogin(user.username);
   };
 
   return (
@@ -45,7 +67,7 @@ export default function Login({ onLogin }: Props) {
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
-                placeholder="admin or operator"
+                placeholder="Enter username"
                 autoFocus
               />
             </div>
@@ -59,21 +81,8 @@ export default function Login({ onLogin }: Props) {
                 placeholder="••••••••"
               />
             </div>
-            {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
-            <button
-              type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition shadow"
-            >
-              Sign In
-            </button>
-          </div>
-
-          <div className="mt-6 pt-5 border-t border-slate-200 text-xs text-slate-500 space-y-1">
-            
-          </div>
-        </form>
-        <p className="text-center text-slate-400 text-xs mt-6">© {new Date().getFullYear()} JobWork Pro. All rights reserved.</p>
-      </div>
-    </div>
-  );
-}
+            {error && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {error}
+              </div>
+            )}
