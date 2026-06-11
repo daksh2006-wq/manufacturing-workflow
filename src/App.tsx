@@ -25,7 +25,15 @@ export default function App() {
   async function loadData() {
     initStore();
 
-    setUsers(store.getUsers());
+    const { data: usersData } = await supabase.from('users').select('*');
+if (usersData) {
+  setUsers(usersData.map((u: any) => ({
+    username: u.username,
+    password: u.password,
+    role: u.role,
+    name: u.name,
+  })));
+}
     setParts(store.getParts());
     setEntries(store.getEntries());
 
