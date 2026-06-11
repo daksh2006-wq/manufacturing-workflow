@@ -30,7 +30,7 @@ export default function Login({ onLogin }: Props) {
         return;
       }
 
-      const passwordMatch = await bcrypt.compare(password, data.password);
+      const passwordMatch = await bcrypt.compare(password.trim(), data.password.trim());
       if (!passwordMatch) {
         setError('Invalid username or password');
         return;
