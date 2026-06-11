@@ -30,11 +30,11 @@ export default function Login({ onLogin }: Props) {
         return;
       }
 
-      const passwordMatch = await bcrypt.compare(password.trim(), data.password.trim());
-      if (!passwordMatch) {
-        setError('Invalid username or password');
-        return;
-      }
+      const passwordMatch = data.password === password.trim();
+if (!passwordMatch) {
+  setError('Invalid username or password');
+  return;
+}
 
       store.setSession({ username: data.username });
       onLogin(data.username);
