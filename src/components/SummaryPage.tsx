@@ -29,7 +29,7 @@ export default function SummaryPage({ entries, companies, parts }: Props) {
       companies.find(c => c.id === e.companyId)?.name || 'Unknown';
 
     const part =
-  parts.find(p => p.id === e.partId)?.name || '(Deleted Part)';
+  (parts || []).find((p: PartDef) => p.id === e.partId)?.name || '(Deleted Part)';
 
     const key = `${e.workflow}||${company}||${part}`;
 

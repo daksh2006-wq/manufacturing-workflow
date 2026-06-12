@@ -82,6 +82,7 @@ if (entriesData) {
       challanNo: e.challan_no,
       date: e.date,
       companyId: e.company_id,
+      partId: e.part_id,
       part: e.part,
       subPart: e.sub_part,
       quantity: e.quantity,
@@ -142,7 +143,7 @@ if (entriesData) {
           {page === 'entries-jw-out' && <EntriesPage entries={entries} setEntries={setEntries} companies={companies} parts={parts} workflow="jobwork_out" title="Job Work (Vendor)" role={role} currentUser={currentUser} />}
           {page === 'entries-stock' && <EntriesPage entries={entries} setEntries={setEntries} companies={companies} parts={parts} workflow="stock_sale" title="Stock / Sale" role={role} currentUser={currentUser} />}
           {page === 'stock' && <StockSalePage companies={companies} parts={parts} role={role} currentUser={currentUser} />}
-          {page === 'summary' && <SummaryPage entries={entries} companies={companies} />}
+          {page === 'summary' && <SummaryPage entries={entries} companies={companies} parts={parts} />}
           {page === 'companies' && role === 'admin' && <CompaniesPage companies={companies} setCompanies={setCompanies} />}
           {page === 'parts' && role === 'admin' && <PartsPage parts={parts} setParts={setParts} />}
           {page === 'users' && role === 'admin' && <UsersPage users={users} setUsers={setUsers} currentUser={currentUser} />}
