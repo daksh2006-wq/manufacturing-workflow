@@ -53,13 +53,33 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
   }, [entries, workflow, search, filterDir, filterFault, parts]);
 
   const totals = useMemo(() => {
-    const wf = entries.filter(e => e.workflow === workflow);
-    const inward = wf.filter(e => e.direction === 'inward').reduce((s, e) => s + Number(e.quantity || 0), 0);
-    const outward = wf.filter(e => e.direction === 'outward').reduce((s, e) => s + Number(e.quantity || 0), 0);
-    const mf = wf.reduce((s, e) => s + Number(e.mfFault || 0), 0);
-    const cf = wf.reduce((s, e) => s + Number(e.cfFault || 0), 0);
-    return { inward, outward, mf, cf, balance: inward - outward - mf - cf, count: wf.length };
-  }, [entries, workflow]);
+  const wf = entries.filter(e => e.workflow === workflow);
+
+  const inward = wf
+    .filter(e => e.direction === 'inward')
+    .reduce((s, e) => s + Number(e.quantity || 0), 0);
+
+  const outward = wf
+    .filter(e => e.direction === 'outward')
+    .reduce((s, e) => s + Number(e.quantity || 0), 0);
+
+  const mf = wf.reduce((s, e) => s + Number(e.mfFault || 0), 0);
+  const cf = wf.reduce((s, e) => s + Number(e.cfFault || 0), 0);
+
+  const balance =
+    workflow === 'jobwork_out'
+      ? outward - inward - mf - cf
+      : inward - outward - mf - cf;
+
+  return {
+    inward,
+    outward,
+    mf,
+    cf,
+    balance,
+    count: wf.length
+  };
+}, [entries, workflow]);
 
   const companyName = (id: string) => companies.find(c => c.id === id)?.name || '—';
 
@@ -165,9 +185,23 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <StatCard label="Entries" value={totals.count} color="slate" />
-        <StatCard label="Inward" value={totals.inward} color="emerald" />
-        <StatCard label="Outward" value={totals.outward} color="amber" />
+       <StatCard label="Entries" value={totals.count} color="slate" />
+
+{workflow === 'jobwork_out' ? (
+  <>
+    <StatCard label="Outward" value={totals.outward} color="amber" />
+    <StatCard label="Inward" value={totals.inward} color="emerald" />
+  </>
+) : (
+  <>
+    <StatCard label="Inward" value={totals.inward} color="emerald" />
+    <StatCard label="Outward" value={totals.outward} color="amber" />
+  </>
+)}
+
+<StatCard label="M/F Fault" value={totals.mf} color="rose" />
+<StatCard label="C/F Fault" value={totals.cf} color="fuchsia" />
+<StatCard label="Balance" value={totals.balance} color="indigo" />
         <StatCard label="M/F Fault" value={totals.mf} color="rose" />
         <StatCard label="C/F Fault" value={totals.cf} color="fuchsia" />
         <StatCard label="Balance" value={totals.balance} color="indigo" />
