@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
+
 import { Entry, WorkflowType, Company } from '../types';
 
 interface Props {
@@ -13,54 +14,88 @@ const workflowLabels: Record<WorkflowType, string> = {
 };
 
 export default function SummaryPage({ entries, companies }: Props) {
-  const [groupBy, setGroupBy] = useState<'company' | 'part' | 'subPart'>('company');
+  
 
   const data = useMemo(() => {
-    const map = new Map<string, { label: string; inward: number; outward: number; mf: number; cf: number; count: number }>();
-    entries.forEach(e => {
-      let label = '';
-      if (groupBy === 'company') label = companies.find(c => c.id === e.companyId)?.name || 'Unknown';
-      else if (groupBy === 'subPart') label = e.subPart || '(No Sub-Part)';
-      else label = e.part || '(No Part)';
-      
-      const key = `${e.workflow}||${label}`;
-      const row = map.get(key) || { label, inward: 0, outward: 0, mf: 0, cf: 0, count: 0 };
-      const qty = Number(e.quantity || 0);
-      const mf = Number(e.mfFault || 0);
-      const cf = Number(e.cfFault || 0);
-      row.count++;
-      if (e.direction === 'inward') row.inward += qty;
-      else row.outward += qty;
-      row.mf += mf;
-      row.cf += cf;
-      map.set(key, row);
-    });
-    return Array.from(map.entries()).map(([key, r]) => {
-  const workflow = key.split('||')[0] as WorkflowType;
+  const map = new Map();
 
-  const balance =
-    workflow === 'jobwork_out'
+  entries.forEach(e => {
+    if (e.workflow === 'stock_sale') return;
+
+    const company =
+      companies.find(c => c.id === e.companyId)?.name || 'Unknown';
+
+    const part = e.part || '(No Part)';
+
+    const key = `${e.workflow}||${company}||${part}`;
+
+    if (!map.has(key)) {
+      map.set(key, {
+        workflow: e.workflow,
+        company,
+        part,
+        inward: 0,
+        outward: 0,
+        mf: 0,
+        cf: 0,
+        count: 0,
+      });
+    }
+
+    const row = map.get(key);
+
+    row.count++;
+    row.mf += Number(e.mfFault || 0);
+    row.cf += Number(e.cfFault || 0);
+
+    if (e.direction === 'inward') {
+      row.inward += Number(e.quantity || 0);
+    } else {
+      row.outward += Number(e.quantity || 0);
+    }
+  });
+
+  return Array.from(map.values()).map((r: any) => ({
+  ...r,
+  workflow: r.workflow as WorkflowType,
+  balance:
+    r.workflow === 'jobwork_out'
       ? r.outward - r.inward - r.mf - r.cf
-      : r.inward - r.outward - r.mf - r.cf;
-
-  return {
-    ...r,
-    workflow,
-    balance,
-  };
-}).sort((a, b) => b.balance - a.balance);
-  }, [entries, companies, groupBy]);
+      : r.inward - r.outward - r.mf - r.cf,
+}));
+}, [entries, companies]);
 
   const exportCSV = () => {
-    const rows = [['Workflow','Group','Entries','Inward','Outward','M/F Qty','C/F Qty','Balance']];
-    data.forEach(d => rows.push([workflowLabels[d.workflow], d.label, String(d.count), String(d.inward), String(d.outward), String(d.mf), String(d.cf), String(d.balance)]));
-    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `summary_by_${groupBy}.csv`; a.click();
-    URL.revokeObjectURL(url);
-  };
+  const rows = [['Workflow','Company','Part','Entries','Inward','Outward','M/F Qty','C/F Qty','Balance']];
+
+  data.forEach((d: any) =>
+    rows.push([
+      workflowLabels[d.workflow as WorkflowType],
+      d.company,
+      d.part,
+      String(d.count),
+      String(d.inward),
+      String(d.outward),
+      String(d.mf),
+      String(d.cf),
+      String(d.balance),
+    ])
+  );
+
+  const csv = rows
+    .map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'summary.csv';
+  a.click();
+
+  URL.revokeObjectURL(url);
+};
 
   return (
     <div className="space-y-6">
@@ -70,30 +105,39 @@ export default function SummaryPage({ entries, companies }: Props) {
           <p className="text-slate-500 text-sm mt-1">Consolidated view across all three workflows</p>
         </div>
         <div className="flex gap-2">
-          <select value={groupBy} onChange={e => setGroupBy(e.target.value as any)}
-            className="px-3 py-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-            <option value="company">Group by Company</option>
-            <option value="part">Group by Part</option>
-            <option value="subPart">Group by Sub-Part</option>
-          </select>
+          
+          
           <button onClick={exportCSV} className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-sm">⬇ Export</button>
         </div>
       </div>
 
-      {(['jobwork_in','jobwork_out','stock_sale'] as WorkflowType[]).map(wf => {
+      {(['jobwork_in','jobwork_out'] as WorkflowType[]).map(wf => {
         const rows = data.filter(d => d.workflow === wf);
+        const groupedRows = rows.reduce((acc: any, r: any) => {
+  if (!acc[r.company]) {
+    acc[r.company] = [];
+  }
+
+  acc[r.company].push(r);
+
+  return acc;
+}, {});
         const totals = rows.reduce((a, r) => ({ inward: a.inward + r.inward, outward: a.outward + r.outward, mf: a.mf + r.mf, cf: a.cf + r.cf, balance: a.balance + r.balance, count: a.count + r.count }), { inward: 0, outward: 0, mf: 0, cf: 0, balance: 0, count: 0 });
         return (
           <div key={wf} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="font-semibold text-slate-800">{workflowLabels[wf]}</h3>
+              <h3 className="font-semibold text-slate-800">
+  {workflowLabels[wf as WorkflowType]}
+</h3>
               <div className="text-xs text-slate-500">{rows.length} groups · {totals.count} entries</div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium">Group</th>
+                    <th className="text-left px-4 py-3 font-medium">
+  Company / Part
+</th>
                     <th className="text-right px-4 py-3 font-medium">Entries</th>
                     <th className="text-right px-4 py-3 font-medium">Inward</th>
                     <th className="text-right px-4 py-3 font-medium">Outward</th>
@@ -104,17 +148,52 @@ export default function SummaryPage({ entries, companies }: Props) {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {rows.length === 0 && <tr><td colSpan={7} className="text-center text-slate-400 py-8">No data</td></tr>}
-                  {rows.map(r => (
-                    <tr key={`${wf}-${r.label}`} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium text-slate-800">{r.label}</td>
-                      <td className="px-4 py-3 text-right text-slate-600">{r.count}</td>
-                      <td className="px-4 py-3 text-right text-emerald-600 font-medium">{r.inward}</td>
-                      <td className="px-4 py-3 text-right text-amber-600 font-medium">{r.outward}</td>
-                      <td className="px-4 py-3 text-right text-rose-600 font-medium">{r.mf}</td>
-                      <td className="px-4 py-3 text-right text-fuchsia-600 font-medium">{r.cf}</td>
-                      <td className="px-4 py-3 text-right font-bold text-indigo-700">{r.balance}</td>
-                    </tr>
-                  ))}
+                  {Object.entries(groupedRows).map(([company, parts]: any) => {
+  const companyUnit =
+    companies.find(c => c.name === company)?.unit || 'pcs';
+
+  return (
+    <React.Fragment key={company}>
+      <tr className="bg-slate-100">
+        <td colSpan={7} className="px-4 py-3 font-bold text-slate-800">
+          {company}
+        </td>
+      </tr>
+
+      {parts.map((r: any) => (
+        <tr key={`${wf}-${company}-${r.part}`} className="hover:bg-slate-50">
+          <td className="px-4 py-3 pl-8 text-slate-700">
+            ↳ {r.part}
+          </td>
+
+          <td className="px-4 py-3 text-right text-slate-600">
+            {r.count}
+          </td>
+
+          <td className="px-4 py-3 text-right text-emerald-600 font-medium">
+            {r.inward}
+          </td>
+
+          <td className="px-4 py-3 text-right text-amber-600 font-medium">
+            {r.outward}
+          </td>
+
+          <td className="px-4 py-3 text-right text-rose-600 font-medium">
+            {r.mf}
+          </td>
+
+          <td className="px-4 py-3 text-right text-fuchsia-600 font-medium">
+            {r.cf}
+          </td>
+
+          <td className="px-4 py-3 text-right font-bold text-indigo-700">
+            {r.balance} {companyUnit.toUpperCase()}
+          </td>
+        </tr>
+      ))}
+    </React.Fragment>
+  );
+})}
                 </tbody>
                 {rows.length > 0 && (
                   <tfoot className="bg-slate-50 text-sm font-semibold">

@@ -14,6 +14,7 @@ export interface Company {
   contact?: string;
   email?: string;
   address?: string;
+  unit?: 'pcs' | 'kg';
 }
 
 export interface PartDef {

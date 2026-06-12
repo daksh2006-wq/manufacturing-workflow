@@ -346,6 +346,11 @@ function EntryForm({ onClose, onSubmit, editing, companies, parts, workflow }: {
 
   // FIX: look up selected part by ID — so BRACKET (80445) and BRACKET (89445) are always distinct
   const selectedPartDef = parts.find(p => p.id === form.partId);
+  const selectedCompany =
+  companies.find(c => c.id === form.companyId);
+
+const isKgCompany =
+  selectedCompany?.unit === 'kg';
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -423,16 +428,20 @@ function EntryForm({ onClose, onSubmit, editing, companies, parts, workflow }: {
                 />
               </Field>
               <Field label="Sub Part">
-                <select
-                  className="inp"
-                  value={form.subPart}
-                  onChange={e => update('subPart', e.target.value)}
-                  disabled={!selectedPartDef || selectedPartDef.subParts.length === 0}
-                >
-                  <option value="">-- Select Sub-Part --</option>
-                  {selectedPartDef?.subParts.map(sp => <option key={sp} value={sp}>{sp}</option>)}
-                </select>
-              </Field>
+  <select
+    className="inp"
+    value={form.subPart}
+    onChange={e => update('subPart', e.target.value)}
+    disabled={!selectedPartDef || selectedPartDef.subParts.length === 0}
+  >
+    <option value="">-- Select Sub-Part --</option>
+    {selectedPartDef?.subParts.map(sp => (
+      <option key={sp} value={sp}>
+        {sp}
+      </option>
+    ))}
+  </select>
+</Field>
             </div>
           </div>
 
@@ -444,22 +453,41 @@ function EntryForm({ onClose, onSubmit, editing, companies, parts, workflow }: {
                 <option value="outward">{dirLabel.outward}</option>
               </select>
             </Field>
-            <Field label="Quantity">
-              <input type="number" min={0} className="inp border-indigo-300" value={form.quantity}
-                onChange={e => update('quantity', e.target.value === '' ? '' : Number(e.target.value))}
-                onBlur={() => { if (form.quantity === '') update('quantity', 0); }} placeholder="0" />
-            </Field>
+            <Field label={`Quantity (${isKgCompany ? 'KG' : 'PCS'})`}>
+  <input
+    type="number"
+    min={0}
+    step="0.001"
+    className="inp border-indigo-300"
+    value={form.quantity}
+    onChange={e =>
+      update(
+        'quantity',
+        e.target.value === ''
+          ? ''
+          : Number(e.target.value)
+      )
+    }
+    onBlur={() => {
+      if (form.quantity === '') update('quantity', 0);
+    }}
+    placeholder={isKgCompany ? "0.000" : "0"}
+  />
+</Field>
+          
+                  
             {form.direction === 'outward' && (
               <>
                 <Field label="M/F Fault Qty *">
-                  <input type="number" min={0} className="inp border-rose-200 focus:ring-rose-500" value={form.mfFault} onChange={e => update('mfFault', e.target.value)} required />
+                  <input type="number" min={0} step="0.001" className="inp border-rose-200 focus:ring-rose-500" value={form.mfFault} onChange={e => update('mfFault', e.target.value)} required />
                 </Field>
                 <Field label="C/F Fault Qty *">
-                  <input type="number" min={0} className="inp border-fuchsia-200 focus:ring-fuchsia-500" value={form.cfFault} onChange={e => update('cfFault', e.target.value)} required />
+                  <input type="number" min={0} step="0.001" className="inp border-fuchsia-200 focus:ring-fuchsia-500" value={form.cfFault} onChange={e => update('cfFault', e.target.value)} required />
                 </Field>
               </>
             )}
           </div>
+          
 
           <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-200">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg">Cancel</button>
