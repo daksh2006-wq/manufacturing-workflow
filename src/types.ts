@@ -34,6 +34,7 @@ export interface Entry {
   date: string; // YYYY-MM-DD
   companyId: string;
   part: string;
+  partId: string;
   subPart: string;
   
   quantity: number;

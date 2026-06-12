@@ -45,7 +45,7 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
         const partDef = parts.find(p => p.id === e.partId);
         return (
           e.challanNo.toLowerCase().includes(q) ||
-          (partDef?.name || e.part || '').toLowerCase().includes(q) ||
+          ((partDef?.name || '').toLowerCase().includes(q) ||
           e.subPart.toLowerCase().includes(q)
         );
       })
@@ -121,7 +121,7 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
           date: updatedEntry.date,
           company_id: updatedEntry.companyId,
           part_id: updatedEntry.partId,       // FIX: store part_id
-          part: updatedEntry.part,             // keep name for backwards compat
+                       // keep name for backwards compat
           sub_part: updatedEntry.subPart,
           quantity: updatedEntry.quantity,
           mf_fault: updatedEntry.mfFault,
@@ -150,7 +150,7 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
           date: newEntry.date,
           company_id: newEntry.companyId,
           part_id: newEntry.partId,           // FIX: store part_id
-          part: newEntry.part,                 // keep name for backwards compat
+                           // keep name for backwards compat
           sub_part: newEntry.subPart,
           quantity: newEntry.quantity,
           mf_fault: newEntry.mfFault,
@@ -251,7 +251,7 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
               {filtered.map(e => {
                 // FIX: look up by partId first, fallback to name for old entries
                 const partDef = getPartDef(e);
-                const partName = partDef?.name || e.part || '';
+                const partName = partDef?.name || '';
                 const modelNo = partDef?.modelNo || '';
                 return (
                   <tr key={e.id} className="hover:bg-slate-50">

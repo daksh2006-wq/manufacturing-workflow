@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from 'react';
 
-import { Entry, WorkflowType, Company } from '../types';
+
+
+import { Entry, WorkflowType, Company, PartDef } from '../types';
 
 interface Props {
   entries: Entry[];
   companies: Company[];
+  parts: PartDef[];
 }
 
 const workflowLabels: Record<WorkflowType, string> = {
@@ -13,7 +16,7 @@ const workflowLabels: Record<WorkflowType, string> = {
   stock_sale: 'Stock / Sale',
 };
 
-export default function SummaryPage({ entries, companies }: Props) {
+export default function SummaryPage({ entries, companies, parts }: Props) {
   
 
   const data = useMemo(() => {
@@ -25,7 +28,8 @@ export default function SummaryPage({ entries, companies }: Props) {
     const company =
       companies.find(c => c.id === e.companyId)?.name || 'Unknown';
 
-    const part = e.part || '(No Part)';
+    const part =
+  parts.find(p => p.id === e.partId)?.name || '(Deleted Part)';
 
     const key = `${e.workflow}||${company}||${part}`;
 
