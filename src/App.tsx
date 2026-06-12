@@ -1,3 +1,4 @@
+import StockSalePage from './components/StockSalePage';
 import { supabase } from './utils/supabase'
 import { useEffect, useState } from 'react';
 import { initStore, store } from './store';
@@ -6,7 +7,7 @@ import Login from './components/Login';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import EntriesPage from './components/EntriesPage';
-import StockPage from './components/StockPage';
+
 import SummaryPage from './components/SummaryPage';
 import CompaniesPage from './components/CompaniesPage';
 import PartsPage from './components/PartsPage';
@@ -140,7 +141,7 @@ if (entriesData) {
           {page === 'entries-jw-in' && <EntriesPage entries={entries} setEntries={setEntries} companies={companies} parts={parts} workflow="jobwork_in" title="Job Work (Customer)" role={role} currentUser={currentUser} />}
           {page === 'entries-jw-out' && <EntriesPage entries={entries} setEntries={setEntries} companies={companies} parts={parts} workflow="jobwork_out" title="Job Work (Vendor)" role={role} currentUser={currentUser} />}
           {page === 'entries-stock' && <EntriesPage entries={entries} setEntries={setEntries} companies={companies} parts={parts} workflow="stock_sale" title="Stock / Sale" role={role} currentUser={currentUser} />}
-          {page === 'stock' && <StockPage entries={entries} parts={parts} />}
+          {page === 'stock' && <StockSalePage companies={companies} parts={parts} role={role} currentUser={currentUser} />}
           {page === 'summary' && <SummaryPage entries={entries} companies={companies} />}
           {page === 'companies' && role === 'admin' && <CompaniesPage companies={companies} setCompanies={setCompanies} />}
           {page === 'parts' && role === 'admin' && <PartsPage parts={parts} setParts={setParts} />}
