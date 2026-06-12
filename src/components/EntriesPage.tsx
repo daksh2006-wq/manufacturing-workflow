@@ -39,16 +39,17 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
         return true;
       })
       .filter(e => {
-        const q = search.toLowerCase();
-        if (!q) return true;
-        // FIX: search by part name (looked up from parts array via partId)
-        const partDef = parts.find(p => p.id === e.partId);
-        return (
-          e.challanNo.toLowerCase().includes(q) ||
-          ((partDef?.name || '').toLowerCase().includes(q) ||
-          e.subPart.toLowerCase().includes(q)
-        );
-      })
+  const q = search.toLowerCase();
+  if (!q) return true;
+
+  const partDef = parts.find(p => p.id === e.partId);
+
+  return (
+    e.challanNo.toLowerCase().includes(q) ||
+    (partDef?.name || '').toLowerCase().includes(q) ||
+    e.subPart.toLowerCase().includes(q)
+  );
+})
       .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
   }, [entries, workflow, search, filterDir, filterFault, parts]);
 
