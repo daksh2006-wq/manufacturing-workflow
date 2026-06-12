@@ -48,7 +48,9 @@ export default function Dashboard({ entries, companies, parts }: Props) {
 
   const recent = [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
   const companyName = (id: string) => companies.find(c => c.id === id)?.name || '—';
-  const modelNo = (partName: string) => parts.find(p => p.name === partName)?.modelNo || '—';
+
+const getPartDef = (entry: Entry) =>
+  parts.find(p => p.id === entry.partId);
 
   return (
     <div className="space-y-6">
@@ -120,8 +122,14 @@ export default function Dashboard({ entries, companies, parts }: Props) {
                   <td className="px-5 py-3 text-slate-700">{e.date}</td>
                   <td className="px-5 py-3 font-medium text-slate-800">{e.challanNo}</td>
                   <td className="px-5 py-3 text-slate-700">{companyName(e.companyId)}</td>
-                  <td className="px-5 py-3 text-slate-700">{e.part}{e.subPart ? ` / ${e.subPart}` : ''}</td>
-                  <td className="px-5 py-3 text-slate-700">{modelNo(e.part)}</td>
+                  <td className="px-5 py-3 text-slate-700">
+  {getPartDef(e)?.name || '—'}
+  {e.subPart ? ` / ${e.subPart}` : ''}
+</td>
+
+<td className="px-5 py-3 text-slate-700">
+  {getPartDef(e)?.modelNo || '—'}
+</td>
                   <td className="px-5 py-3">
                     <span className={`text-xs font-medium px-2 py-1 rounded ${e.direction === 'inward' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                       {e.direction}
