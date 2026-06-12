@@ -202,11 +202,7 @@ export default function EntriesPage({ entries, setEntries, companies, parts, wor
 <StatCard label="M/F Fault" value={totals.mf} color="rose" />
 <StatCard label="C/F Fault" value={totals.cf} color="fuchsia" />
 <StatCard label="Balance" value={totals.balance} color="indigo" />
-        <StatCard label="M/F Fault" value={totals.mf} color="rose" />
-        <StatCard label="C/F Fault" value={totals.cf} color="fuchsia" />
-        <StatCard label="Balance" value={totals.balance} color="indigo" />
-      </div>
-
+        
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
         <div className="flex flex-col md:flex-row gap-3">
           <input
