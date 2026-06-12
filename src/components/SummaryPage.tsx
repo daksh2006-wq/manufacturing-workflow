@@ -36,9 +36,19 @@ export default function SummaryPage({ entries, companies }: Props) {
       map.set(key, row);
     });
     return Array.from(map.entries()).map(([key, r]) => {
-      const workflow = key.split('||')[0] as WorkflowType;
-      return { ...r, workflow, balance: r.inward - r.outward - r.mf - r.cf };
-    }).sort((a, b) => b.balance - a.balance);
+  const workflow = key.split('||')[0] as WorkflowType;
+
+  const balance =
+    workflow === 'jobwork_out'
+      ? r.outward - r.inward - r.mf - r.cf
+      : r.inward - r.outward - r.mf - r.cf;
+
+  return {
+    ...r,
+    workflow,
+    balance,
+  };
+}).sort((a, b) => b.balance - a.balance);
   }, [entries, companies, groupBy]);
 
   const exportCSV = () => {
