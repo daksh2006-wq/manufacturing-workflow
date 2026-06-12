@@ -126,6 +126,13 @@ export default function SummaryPage({ entries, companies, parts }: Props) {
 
   return acc;
 }, {});
+Object.keys(groupedRows).forEach(company => {
+  groupedRows[company].sort((a: any, b: any) =>
+    a.part.toLowerCase().localeCompare(
+      b.part.toLowerCase()
+    )
+  );
+});
         const totals = rows.reduce((a, r) => ({ inward: a.inward + r.inward, outward: a.outward + r.outward, mf: a.mf + r.mf, cf: a.cf + r.cf, balance: a.balance + r.balance, count: a.count + r.count }), { inward: 0, outward: 0, mf: 0, cf: 0, balance: 0, count: 0 });
         return (
           <div key={wf} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
