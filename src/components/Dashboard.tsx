@@ -49,8 +49,8 @@ export default function Dashboard({ entries, companies, parts }: Props) {
   const recent = [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
   const companyName = (id: string) => companies.find(c => c.id === id)?.name || '—';
 
-const getPartDef = (entry: Entry) =>
-  parts.find(p => p.id === entry.partId);
+  const getPartDef = (entry: Entry) =>
+    parts.find(p => p.id === entry.partId);
 
   return (
     <div className="space-y-6">
@@ -71,10 +71,11 @@ const getPartDef = (entry: Entry) =>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {(['jobwork_in', 'jobwork_out', 'stock_sale'] as WorkflowType[]).map(w => {
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {(['jobwork_in', 'jobwork_out'] as WorkflowType[]).map(w => {
           const s = stats.byWorkflow[w];
-          const balance = s.inward - s.outward - s.mf - s.cf;
+          const isVendor = w === 'jobwork_out';
+          const balance = isVendor ? s.outward - s.inward - s.mf - s.cf : s.inward - s.outward - s.mf - s.cf;
           return (
             <div key={w} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
               <div className="flex items-center justify-between mb-4">
@@ -82,11 +83,25 @@ const getPartDef = (entry: Entry) =>
                 <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">{s.count} entries</span>
               </div>
               <div className="space-y-2.5 text-sm">
-                <div className="flex justify-between"><span className="text-slate-500">Inward</span><span className="font-medium text-emerald-600">{s.inward.toLocaleString()}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Outward</span><span className="font-medium text-amber-600">{s.outward.toLocaleString()}</span></div>
+                {isVendor ? (
+                  <>
+                    <div className="flex justify-between"><span className="text-slate-500">Outward</span><span className="font-medium text-amber-600">{s.outward.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Inward</span><span className="font-medium text-emerald-600">{s.inward.toLocaleString()}</span></div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between"><span className="text-slate-500">Inward</span><span className="font-medium text-emerald-600">{s.inward.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Outward</span><span className="font-medium text-amber-600">{s.outward.toLocaleString()}</span></div>
+                  </>
+                )}
                 <div className="flex justify-between"><span className="text-slate-500">M/F Fault Qty</span><span className="font-medium text-rose-600">{s.mf.toLocaleString()}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">C/F Fault Qty</span><span className="font-medium text-fuchsia-600">{s.cf.toLocaleString()}</span></div>
-                <div className="border-t pt-2.5 flex justify-between"><span className="text-slate-700 font-medium">Balance</span><span className="font-bold text-indigo-600">{balance.toLocaleString()}</span></div>
+                <div className="border-t pt-2.5 flex justify-between">
+                  <span className="text-slate-700 font-medium">Balance</span>
+                  <span className={`font-bold ${balance < 0 ? 'text-rose-600' : 'text-indigo-600'}`}>
+                    {balance.toLocaleString()}
+                  </span>
+                </div>
               </div>
             </div>
           );
@@ -123,13 +138,12 @@ const getPartDef = (entry: Entry) =>
                   <td className="px-5 py-3 font-medium text-slate-800">{e.challanNo}</td>
                   <td className="px-5 py-3 text-slate-700">{companyName(e.companyId)}</td>
                   <td className="px-5 py-3 text-slate-700">
-  {getPartDef(e)?.name || '—'}
-  {e.subPart ? ` / ${e.subPart}` : ''}
-</td>
-
-<td className="px-5 py-3 text-slate-700">
-  {getPartDef(e)?.modelNo || '—'}
-</td>
+                    {getPartDef(e)?.name || '—'}
+                    {e.subPart ? ` / ${e.subPart}` : ''}
+                  </td>
+                  <td className="px-5 py-3 text-slate-700">
+                    {getPartDef(e)?.modelNo || '—'}
+                  </td>
                   <td className="px-5 py-3">
                     <span className={`text-xs font-medium px-2 py-1 rounded ${e.direction === 'inward' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                       {e.direction}

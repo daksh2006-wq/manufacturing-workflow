@@ -1,4 +1,3 @@
-import bcrypt from 'bcryptjs';
 import { useState } from 'react';
 import { store } from '../store';
 import { supabase } from '../utils/supabase';
